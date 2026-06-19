@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #E50914;
+  --primary-light: #FF1A27;
+  --primary-dark: #B3070F;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  @apply bg-black text-white font-sans antialiased;
+  scrollbar-width: thin;
+  scrollbar-color: #E50914 #1a1a1a;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { @apply bg-dark-card; }
+::-webkit-scrollbar-thumb { @apply bg-primary rounded-full; }
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-dark text-white font-semibold py-2.5 px-6 rounded-lg transition-all duration-200 active:scale-95;
+  }
+  .btn-secondary {
+    @apply border border-primary text-primary hover:bg-primary hover:text-white font-semibold py-2.5 px-6 rounded-lg transition-all duration-200;
+  }
+  .card {
+    @apply bg-dark-card border border-dark-border rounded-xl overflow-hidden hover:border-primary/30 transition-all duration-300;
+  }
+  .input {
+    @apply w-full bg-dark-card border border-dark-border text-white placeholder-dark-text rounded-lg px-4 py-3 focus:outline-none focus:border-primary transition-colors;
+  }
+  .badge {
+    @apply text-xs font-semibold px-2.5 py-1 rounded-full;
+  }
+  .skeleton {
+    @apply bg-dark-card animate-pulse rounded;
+  }
+  .section-title {
+    @apply text-2xl font-bold text-white mb-6;
+  }
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent;
+  }
+  .overlay {
+    background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 50%, transparent 100%);
+  }
+  .glass {
+    @apply bg-white/5 backdrop-blur-md border border-white/10;
+  }
+}
+
+.swiper-pagination-bullet {
+  @apply bg-white/40 !important;
+}
+.swiper-pagination-bullet-active {
+  @apply bg-primary !important;
+}
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+.shimmer {
+  background: linear-gradient(to right, #141414 4%, #1f1f1f 25%, #141414 36%);
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
