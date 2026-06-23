@@ -4,6 +4,7 @@ import { FiEdit, FiTrash2, FiSearch, FiPlus, FiCalendar, FiMapPin, FiToggleLeft,
 import { getEvents, deleteEvent, updateEvent } from '../../services/api';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import PageTransition from '../../components/common/PageTransition';
 
 const AdminEvents = () => {
   const [events, setEvents] = useState([]);
@@ -59,6 +60,8 @@ const AdminEvents = () => {
   };
 
   return (
+
+    <PageTransition>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -173,6 +176,8 @@ const AdminEvents = () => {
         </div>
       </div>
     </div>
+  
+    </PageTransition>
   );
 };
 

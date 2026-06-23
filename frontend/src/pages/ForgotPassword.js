@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiMail, FiArrowLeft, FiSend, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
 import { forgotPassword } from '../services/api';
+import PageTransition from '../components/common/PageTransition';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -25,6 +26,7 @@ const ForgotPassword = () => {
   };
 
   return (
+    <PageTransition>
     <div className="min-h-screen flex items-center justify-center bg-black px-4">
       <div className="w-full max-w-md">
         <Link to="/login" className="flex items-center gap-2 text-gray-400 hover:text-white mb-8 transition-colors text-sm">
@@ -92,6 +94,7 @@ const ForgotPassword = () => {
         </div>
       </div>
     </div>
+    </PageTransition>
   );
 };
 

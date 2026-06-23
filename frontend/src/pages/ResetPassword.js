@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { FiLock, FiEye, FiEyeOff, FiArrowLeft, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
 import { resetPassword } from '../services/api';
 import toast from 'react-hot-toast';
+import PageTransition from '../components/common/PageTransition';
 
 const ResetPassword = () => {
   const { token } = useParams();
@@ -32,6 +33,7 @@ const ResetPassword = () => {
   };
 
   return (
+    <PageTransition>
     <div className="min-h-screen flex items-center justify-center bg-black px-4">
       <div className="w-full max-w-md">
         <Link to="/login" className="flex items-center gap-2 text-gray-400 hover:text-white mb-8 transition-colors text-sm">
@@ -108,6 +110,7 @@ const ResetPassword = () => {
         </div>
       </div>
     </div>
+    </PageTransition>
   );
 };
 

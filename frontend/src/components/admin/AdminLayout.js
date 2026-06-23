@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import { FiMenu, FiBell } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import AdminSidebar from './AdminSidebar';
@@ -7,6 +8,7 @@ import AdminSidebar from './AdminSidebar';
 const AdminLayout = () => {
   const { user, isAdmin, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-black">
@@ -45,7 +47,9 @@ const AdminLayout = () => {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <Outlet />
+          <AnimatePresence mode="wait">
+            <Outlet key={location.pathname} />
+          </AnimatePresence>
         </main>
       </div>
     </div>

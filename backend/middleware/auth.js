@@ -1,9 +1,16 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { COOKIE_NAME } = require('../utils/cookie');
 
 exports.protect = async (req, res, next) => {
   let token;
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+  // Prefer the httpOnly cookie (set by login/register/etc) — this is what the
+  // browser frontend uses. Fall back to the Authorization header for
+  // non-browser clients (mobile apps, scripts, Postman) that can't rely on
+  // cookies and instead hold the token themselves.
+  if (req.cookies && req.cookies[COOKIE_NAME]) {
+    token = req.cookies[COOKIE_NAME];
+  } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     token = req.headers.authorization.split(' ')[1];
   }
   if (!token) {

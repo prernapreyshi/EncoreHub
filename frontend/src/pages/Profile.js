@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { FiUser, FiMail, FiPhone, FiEdit3, FiSave, FiX, FiCamera, FiShield, FiBookOpen, FiHeart, FiCalendar } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { FiUser, FiMail, FiPhone, FiEdit3, FiSave, FiX, FiCamera, FiShield, FiBookOpen, FiHeart, FiCalendar, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import { updateProfile } from '../services/api';
+import { updateProfile, changePassword, getUserBookings } from '../services/api';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import PageTransition from '../components/common/PageTransition';
 
 const StatCard = ({ icon: Icon, label, value, color, to }) => (
   <Link to={to} className="card p-5 flex items-center gap-4 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-0.5 transition-all group">
@@ -22,7 +23,23 @@ const Profile = () => {
   const { user, updateUser, isAdmin } = useAuth();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [bookingCount, setBookingCount] = useState('—');
   const [form, setForm] = useState({ name: user?.name || '', phone: user?.phone || '', avatar: user?.avatar || '' });
+
+  const [pwEditing, setPwEditing] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
+  const [showPw, setShowPw] = useState({ current: false, next: false, confirm: false });
+  const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+
+  useEffect(() => {
+    // Request page 1 with limit 1 — we only need `data.total`, the aggregate
+    // count from the server, not an actual list of bookings. This avoids
+    // loading all bookings just to count them, and works correctly regardless
+    // of how many bookings the user has.
+    getUserBookings({ page: 1, limit: 1 })
+      .then(({ data }) => setBookingCount(data.total ?? data.bookings?.length ?? '—'))
+      .catch(() => {/* silent — count stays as — */});
+  }, []);
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Name cannot be empty'); return; }
@@ -44,9 +61,38 @@ const Profile = () => {
     setEditing(false);
   };
 
+  const handleChangePassword = async () => {
+    const { currentPassword, newPassword, confirmPassword } = pwForm;
+    if (!user?.googleId && !currentPassword) {
+      toast.error('Please enter your current password');
+      return;
+    }
+    if (newPassword.length < 6) { toast.error('New password must be at least 6 characters'); return; }
+    if (!/\d/.test(newPassword)) { toast.error('New password must contain at least one number'); return; }
+    if (newPassword !== confirmPassword) { toast.error('Passwords do not match'); return; }
+
+    setPwLoading(true);
+    try {
+      await changePassword({ currentPassword, newPassword });
+      toast.success('Password updated successfully');
+      setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPwEditing(false);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to update password');
+    } finally {
+      setPwLoading(false);
+    }
+  };
+
+  const handlePwCancel = () => {
+    setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    setPwEditing(false);
+  };
+
   if (!user) return null;
 
   return (
+    <PageTransition>
     <div className="min-h-screen pt-20 pb-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6">
         <h1 className="text-3xl font-black text-white mb-8">My Profile</h1>
@@ -176,15 +222,102 @@ const Profile = () => {
               </div>
             </div>
 
+            {/* Change Password */}
+            <div className="card p-6 mt-4">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <FiLock className="w-4 h-4 text-gray-500" /> Password & Security
+                </h2>
+                {!pwEditing ? (
+                  <button onClick={() => setPwEditing(true)} className="flex items-center gap-2 text-sm text-primary hover:text-primary-light font-medium transition-colors">
+                    <FiEdit3 className="w-4 h-4" /> Change Password
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button onClick={handlePwCancel} className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-dark-border hover:border-gray-500 transition-all">
+                      <FiX className="w-4 h-4" /> Cancel
+                    </button>
+                    <button onClick={handleChangePassword} disabled={pwLoading} className="flex items-center gap-1.5 text-sm btn-primary py-1.5 px-4">
+                      {pwLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><FiSave className="w-4 h-4" /> Update</>}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {!pwEditing ? (
+                <p className="text-gray-400 text-sm flex items-center gap-2">
+                  <span className="tracking-widest">••••••••</span>
+                  {user.googleId && <span className="badge bg-blue-500/20 text-blue-400 text-xs">Google sign-in</span>}
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {!user.googleId && (
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Current Password</label>
+                      <div className="relative">
+                        <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <input
+                          type={showPw.current ? 'text' : 'password'}
+                          value={pwForm.currentPassword}
+                          onChange={e => setPwForm(p => ({ ...p, currentPassword: e.target.value }))}
+                          className="input pl-10 pr-10"
+                          placeholder="••••••••"
+                          autoComplete="current-password"
+                        />
+                        <button type="button" onClick={() => setShowPw(p => ({ ...p, current: !p.current }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors">
+                          {showPw.current ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">New Password</label>
+                    <div className="relative">
+                      <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type={showPw.next ? 'text' : 'password'}
+                        value={pwForm.newPassword}
+                        onChange={e => setPwForm(p => ({ ...p, newPassword: e.target.value }))}
+                        className="input pl-10 pr-10"
+                        placeholder="At least 6 characters, 1 number"
+                        autoComplete="new-password"
+                      />
+                      <button type="button" onClick={() => setShowPw(p => ({ ...p, next: !p.next }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors">
+                        {showPw.next ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Confirm New Password</label>
+                    <div className="relative">
+                      <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type={showPw.confirm ? 'text' : 'password'}
+                        value={pwForm.confirmPassword}
+                        onChange={e => setPwForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                        className="input pl-10 pr-10"
+                        placeholder="Re-enter new password"
+                        autoComplete="new-password"
+                      />
+                      <button type="button" onClick={() => setShowPw(p => ({ ...p, confirm: !p.confirm }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors">
+                        {showPw.confirm ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4 mt-4">
-              <StatCard icon={FiBookOpen} label="Total Bookings" value="—" color="bg-blue-500/20 text-blue-400" to="/my-bookings" />
+              <StatCard icon={FiBookOpen} label="Total Bookings" value={bookingCount} color="bg-blue-500/20 text-blue-400" to="/my-bookings" />
               <StatCard icon={FiHeart} label="Saved Events" value={user.favorites?.length || 0} color="bg-primary/20 text-primary" to="/wishlist" />
             </div>
           </div>
         </div>
       </div>
     </div>
+    </PageTransition>
   );
 };
 

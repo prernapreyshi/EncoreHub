@@ -7,6 +7,8 @@ const seatSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   isBooked: { type: Boolean, default: false },
   isBlocked: { type: Boolean, default: false },
+  blockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  blockedUntil: { type: Date, default: null },
 });
 
 const eventSchema = new mongoose.Schema({
@@ -127,7 +129,10 @@ eventSchema.pre('save', function (next) {
     }
     this.seats = seats;
   }
-  this.availableSeats = this.seats.filter(s => !s.isBooked && !s.isBlocked).length;
+  const now = Date.now();
+  this.availableSeats = this.seats.filter(
+    s => !s.isBooked && (!s.isBlocked || (s.blockedUntil && s.blockedUntil.getTime() < now))
+  ).length;
   next();
 });
 

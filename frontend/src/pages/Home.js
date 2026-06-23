@@ -4,7 +4,7 @@ import { FiArrowRight, FiTrendingUp, FiStar, FiZap } from 'react-icons/fi';
 import { getEvents } from '../services/api';
 import HeroBanner from '../components/common/HeroBanner';
 import EventCard from '../components/events/EventCard';
-
+import PageTransition from '../components/common/PageTransition';
 const categories = [
   { name: 'Movies', icon: '🎬', color: 'from-blue-600/30 to-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400' },
   { name: 'Concerts', icon: '🎵', color: 'from-purple-600/30 to-purple-500/10', border: 'border-purple-500/30', text: 'text-purple-400' },
@@ -75,7 +75,7 @@ const Home = () => {
   }, []);
 
   return (
-    <div>
+    <PageTransition>
       {/* Hero */}
       <HeroBanner events={featured} />
 
@@ -142,7 +142,7 @@ const Home = () => {
           </div>
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 };
 

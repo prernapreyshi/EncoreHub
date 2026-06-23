@@ -3,6 +3,7 @@ import { FiSearch, FiCalendar, FiRefreshCw, FiDownload } from 'react-icons/fi';
 import { getAllBookings } from '../../services/api';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import PageTransition from '../../components/common/PageTransition';
 
 const statusConfig = {
   confirmed: 'bg-green-500/20 text-green-400 border-green-500/30',
@@ -17,34 +18,57 @@ const paymentConfig = {
   refunded: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
 };
 
+const PAGE_SIZE = 20;
+
 const AdminBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  const fetchBookings = async () => {
-    setLoading(true);
+  const fetchBookings = async (pageNum = 1, append = false) => {
+    const setBusy = append ? setLoadingMore : setLoading;
+    setBusy(true);
     try {
-      const { data } = await getAllBookings();
-      setBookings(data.bookings);
+      const { data } = await getAllBookings({
+        page: pageNum,
+        limit: PAGE_SIZE,
+        ...(statusFilter && { status: statusFilter }),
+      });
+      setBookings(prev => (append ? [...prev, ...data.bookings] : data.bookings));
+      setTotalPages(data.pages || 1);
+      setTotal(data.total || 0);
+      setPage(pageNum);
     } catch {
       toast.error('Failed to load bookings');
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   };
 
-  useEffect(() => { fetchBookings(); }, []);
+  // Status filter changes go through the server; re-fetch from page 1.
+  useEffect(() => { fetchBookings(1, false); }, [statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handleLoadMore = () => {
+    if (page < totalPages) fetchBookings(page + 1, true);
+  };
+
+  // Search filters within whatever's currently loaded — fast, client-side,
+  // and doesn't require a server round trip on every keystroke. For a full
+  // cross-dataset search, narrowing by status first keeps result sets small.
   const filtered = bookings.filter(b => {
-    const matchSearch = !search ||
-      b.bookingRef?.toLowerCase().includes(search.toLowerCase()) ||
-      b.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
-      b.user?.email?.toLowerCase().includes(search.toLowerCase()) ||
-      b.event?.title?.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = !statusFilter || b.bookingStatus === statusFilter;
-    return matchSearch && matchStatus;
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      b.bookingRef?.toLowerCase().includes(q) ||
+      b.user?.name?.toLowerCase().includes(q) ||
+      b.user?.email?.toLowerCase().includes(q) ||
+      b.event?.title?.toLowerCase().includes(q)
+    );
   });
 
   const totalRevenue = filtered.filter(b => b.paymentStatus === 'paid').reduce((s, b) => s + (b.totalAmount || 0), 0);
@@ -62,18 +86,26 @@ const AdminBookings = () => {
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'bookings.csv'; a.click();
-    toast.success('CSV exported');
+    toast.success(
+      bookings.length < total
+        ? `CSV exported (${filtered.length} of ${total} total — load more to include the rest)`
+        : 'CSV exported'
+    );
   };
 
   return (
+
+    <PageTransition>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black text-white">Bookings</h1>
-          <p className="text-gray-400 text-sm mt-1">{filtered.length} bookings · Revenue: <span className="text-primary font-bold">₹{totalRevenue.toLocaleString()}</span></p>
+          <p className="text-gray-400 text-sm mt-1">
+            {bookings.length} of {total} loaded · Revenue (loaded): <span className="text-primary font-bold">₹{totalRevenue.toLocaleString()}</span>
+          </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={fetchBookings} className="p-2.5 rounded-lg border border-dark-border text-gray-400 hover:text-white hover:border-gray-500 transition-all">
+          <button onClick={() => fetchBookings(1, false)} className="p-2.5 rounded-lg border border-dark-border text-gray-400 hover:text-white hover:border-gray-500 transition-all">
             <FiRefreshCw className="w-4 h-4" />
           </button>
           <button onClick={exportCSV} className="flex items-center gap-2 py-2.5 px-4 rounded-lg border border-dark-border text-gray-300 hover:border-primary hover:text-primary text-sm font-medium transition-all">
@@ -167,7 +199,22 @@ const AdminBookings = () => {
           </table>
         </div>
       </div>
+
+      {!loading && page < totalPages && (
+        <div className="text-center">
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="btn-secondary px-8 py-2.5 inline-flex items-center gap-2 disabled:opacity-50"
+          >
+            {loadingMore && <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />}
+            {loadingMore ? 'Loading…' : `Load More (${total - bookings.length} remaining)`}
+          </button>
+        </div>
+      )}
     </div>
+  
+    </PageTransition>
   );
 };
 

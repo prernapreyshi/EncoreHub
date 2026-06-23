@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { FiCalendar, FiMapPin, FiClock, FiUsers, FiStar, FiHeart, FiShare2, FiTag, FiArrowLeft } from 'react-icons/fi';
 import { getEventById, toggleFavorite } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import PageTransition from '../components/common/PageTransition';
 
 const EventDetails = () => {
   const { id } = useParams();
@@ -12,6 +14,7 @@ const EventDetails = () => {
   const { user, updateUser } = useAuth();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   const isFavorite = user?.favorites?.some(f => (f._id || f) === id);
 
@@ -68,10 +71,31 @@ const EventDetails = () => {
   ].filter(p => p.price > 0);
 
   return (
+    <PageTransition>
     <div className="min-h-screen pt-16">
+      <Helmet>
+        <title>{event.title} — EncoreHub</title>
+        <meta name="description" content={event.description?.slice(0, 155) || `Book tickets for ${event.title} on EncoreHub.`} />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={`${event.title} — EncoreHub`} />
+        <meta property="og:description" content={event.description?.slice(0, 200) || `Book tickets for ${event.title} on EncoreHub.`} />
+        {event.image && <meta property="og:image" content={event.image} />}
+        <meta property="og:url" content={window.location.href} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${event.title} — EncoreHub`} />
+        <meta name="twitter:description" content={event.description?.slice(0, 200) || `Book tickets for ${event.title} on EncoreHub.`} />
+        {event.image && <meta name="twitter:image" content={event.image} />}
+      </Helmet>
       {/* Hero */}
-      <div className="relative h-[55vh] min-h-[400px] overflow-hidden">
-        <img src={event.image || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1600'} alt={event.title} className="w-full h-full object-cover" />
+      <div className="relative h-[55vh] min-h-[400px] overflow-hidden bg-dark-card">
+        {/* Shimmer shown while the image is still downloading */}
+        {!imgLoaded && <div className="absolute inset-0 shimmer" />}
+        <img
+          src={event.image || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1600'}
+          alt={event.title}
+          onLoad={() => setImgLoaded(true)}
+          className={`w-full h-full object-cover transition-opacity duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent" />
         <div className="absolute top-20 left-4 sm:left-6">
@@ -204,6 +228,7 @@ const EventDetails = () => {
         </div>
       </div>
     </div>
+    </PageTransition>
   );
 };
 

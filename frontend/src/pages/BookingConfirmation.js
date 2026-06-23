@@ -5,6 +5,7 @@ import { QRCodeSVG as QRCode } from 'qrcode.react';
 import { getBookingById } from '../services/api';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import PageTransition from '../components/common/PageTransition';
 
 const BookingConfirmation = () => {
   const { id } = useParams();
@@ -36,6 +37,7 @@ const BookingConfirmation = () => {
   const qrValue = JSON.stringify({ ref: booking.bookingRef, seats: booking.seats?.map(s => s.seatNumber) });
 
   return (
+    <PageTransition>
     <div className="min-h-screen pt-20 pb-12">
       <div className="max-w-2xl mx-auto px-4 sm:px-6">
         {/* Success Header */}
@@ -126,6 +128,7 @@ const BookingConfirmation = () => {
         </div>
       </div>
     </div>
+    </PageTransition>
   );
 };
 

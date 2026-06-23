@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiAlertCircle, FiCheck } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
+import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import PageTransition from '../components/common/PageTransition';
 
 const StrengthBar = ({ password }) => {
   const checks = [
@@ -31,7 +34,7 @@ const StrengthBar = ({ password }) => {
 };
 
 const Signup = () => {
-  const { register } = useAuth();
+  const { register, googleLogin } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
   const [showPass, setShowPass] = useState(false);
@@ -50,7 +53,7 @@ const Signup = () => {
     if (!form.email) { setError('Email is required'); return; }
     if (form.password.length < 6) { setError('Password must be at least 6 characters'); return; }
     if (form.password !== form.confirm) { setError('Passwords do not match'); return; }
-    if (!agreed) { setError('Please accept terms to continue'); return; }
+    if (!agreed) { setError('Please accept the terms to continue'); return; }
     setLoading(true);
     try {
       await register(form.name.trim(), form.email, form.password);
@@ -63,6 +66,22 @@ const Signup = () => {
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const decoded = jwtDecode(credentialResponse.credential);
+      await googleLogin({
+        name: decoded.name,
+        email: decoded.email,
+        googleId: decoded.sub,
+        avatar: decoded.picture,
+      });
+      toast.success(`Welcome to EncoreHub, ${decoded.name}! 🎉`);
+      navigate('/');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Google sign-in failed');
+    }
+  };
+
   const perks = [
     'Instant ticket booking & confirmation',
     'Exclusive early access to events',
@@ -71,11 +90,14 @@ const Signup = () => {
   ];
 
   return (
+    <PageTransition>
     <div className="min-h-screen flex">
       {/* Left */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-black to-dark-card items-center justify-center">
-        <div className="absolute inset-0 opacity-20"
-          style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #E50914 0%, transparent 50%), radial-gradient(circle at 20% 80%, #ff6b35 0%, transparent 40%)' }} />
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #E50914 0%, transparent 50%), radial-gradient(circle at 20% 80%, #ff6b35 0%, transparent 40%)' }}
+        />
         <div className="relative z-10 p-12">
           <Link to="/" className="flex items-center gap-3 mb-10">
             <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center font-black text-white text-xl">E</div>
@@ -109,6 +131,35 @@ const Signup = () => {
           <h1 className="text-3xl font-black text-white mb-2">Create Account</h1>
           <p className="text-gray-400 mb-8">Start your journey. It's free forever.</p>
 
+          {/* Google Sign-Up */}
+          <div className="flex justify-center mb-5">
+            {process.env.REACT_APP_GOOGLE_CLIENT_ID && process.env.REACT_APP_GOOGLE_CLIENT_ID !== 'your_google_client_id_here' ? (
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => toast.error('Google sign-in failed')}
+                theme="filled_black"
+                shape="rectangular"
+                size="large"
+                text="signup_with"
+                width="368"
+              />
+            ) : (
+              <button
+                onClick={() => toast('Add REACT_APP_GOOGLE_CLIENT_ID to .env to enable Google Sign-Up', { icon: 'ℹ️' })}
+                className="w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-dark-border hover:border-gray-500 text-gray-400 font-medium transition-all hover:bg-white/5"
+              >
+                <FcGoogle className="w-5 h-5" /> Continue with Google
+                <span className="text-xs text-gray-600">(not configured)</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 mb-5">
+            <div className="flex-1 border-t border-dark-border" />
+            <span className="text-gray-500 text-sm">or register with email</span>
+            <div className="flex-1 border-t border-dark-border" />
+          </div>
+
           {error && (
             <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-5 text-red-400 text-sm">
               <FiAlertCircle className="w-4 h-4 flex-shrink-0" /> {error}
@@ -120,24 +171,33 @@ const Signup = () => {
               <label className="block text-sm font-medium text-gray-300 mb-1.5">Full Name</label>
               <div className="relative">
                 <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input name="name" type="text" value={form.name} onChange={handleChange}
-                  placeholder="John Doe" className="input pl-10" required />
+                <input
+                  name="name" type="text" value={form.name} onChange={handleChange}
+                  placeholder="John Doe" className="input pl-10" required
+                  autoComplete="name"
+                />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">Email</label>
               <div className="relative">
                 <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input name="email" type="email" value={form.email} onChange={handleChange}
-                  placeholder="you@example.com" className="input pl-10" required />
+                <input
+                  name="email" type="email" value={form.email} onChange={handleChange}
+                  placeholder="you@example.com" className="input pl-10" required
+                  autoComplete="email"
+                />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
               <div className="relative">
                 <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input name="password" type={showPass ? 'text' : 'password'} value={form.password} onChange={handleChange}
-                  placeholder="Min. 6 characters" className="input pl-10 pr-10" required />
+                <input
+                  name="password" type={showPass ? 'text' : 'password'} value={form.password}
+                  onChange={handleChange} placeholder="Min. 6 characters" className="input pl-10 pr-10" required
+                  autoComplete="new-password"
+                />
                 <button type="button" onClick={() => setShowPass(!showPass)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
                   {showPass ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
@@ -149,18 +209,26 @@ const Signup = () => {
               <label className="block text-sm font-medium text-gray-300 mb-1.5">Confirm Password</label>
               <div className="relative">
                 <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input name="confirm" type="password" value={form.confirm} onChange={handleChange}
-                  placeholder="Re-enter your password" className="input pl-10" required />
+                <input
+                  name="confirm" type="password" value={form.confirm} onChange={handleChange}
+                  placeholder="Re-enter your password" className="input pl-10" required
+                  autoComplete="new-password"
+                />
                 {form.confirm && (
                   <div className={`absolute right-3 top-1/2 -translate-y-1/2 ${form.password === form.confirm ? 'text-green-400' : 'text-red-400'}`}>
-                    {form.password === form.confirm ? <FiCheck className="w-4 h-4" /> : <FiAlertCircle className="w-4 h-4" />}
+                    {form.password === form.confirm
+                      ? <FiCheck className="w-4 h-4" />
+                      : <FiAlertCircle className="w-4 h-4" />
+                    }
                   </div>
                 )}
               </div>
             </div>
             <label className="flex items-start gap-3 cursor-pointer">
-              <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)}
-                className="mt-0.5 accent-primary" />
+              <input
+                type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)}
+                className="mt-0.5 accent-primary"
+              />
               <span className="text-gray-400 text-sm">
                 I agree to the{' '}
                 <span className="text-primary hover:underline cursor-pointer">Terms of Service</span>
@@ -168,21 +236,16 @@ const Signup = () => {
                 <span className="text-primary hover:underline cursor-pointer">Privacy Policy</span>
               </span>
             </label>
-            <button type="submit" disabled={loading}
-              className="w-full btn-primary py-3.5 text-base flex items-center justify-center gap-2 shadow-lg shadow-primary/30">
-              {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Create Account'}
+            <button
+              type="submit" disabled={loading}
+              className="w-full btn-primary py-3.5 text-base flex items-center justify-center gap-2 shadow-lg shadow-primary/30"
+            >
+              {loading
+                ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                : 'Create Account'
+              }
             </button>
           </form>
-
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 border-t border-dark-border" />
-            <span className="text-gray-500 text-sm">or</span>
-            <div className="flex-1 border-t border-dark-border" />
-          </div>
-
-          <button className="w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-dark-border hover:border-gray-500 text-white font-medium transition-all hover:bg-white/5">
-            <FcGoogle className="w-5 h-5" /> Continue with Google
-          </button>
 
           <p className="text-center text-gray-400 mt-6 text-sm">
             Already have an account?{' '}
@@ -191,6 +254,7 @@ const Signup = () => {
         </div>
       </div>
     </div>
+    </PageTransition>
   );
 };
 

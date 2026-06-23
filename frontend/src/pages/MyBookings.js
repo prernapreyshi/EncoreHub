@@ -4,11 +4,13 @@ import { FiCalendar, FiMapPin, FiClock, FiTag, FiDownload, FiXCircle, FiCheckCir
 import { getUserBookings, cancelBooking } from '../services/api';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import PageTransition from '../components/common/PageTransition';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 const statusConfig = {
   confirmed: { icon: FiCheckCircle, color: 'text-green-400', bg: 'bg-green-500/20 border-green-500/30', label: 'Confirmed' },
-  cancelled: { icon: FiXCircle, color: 'text-red-400', bg: 'bg-red-500/20 border-red-500/30', label: 'Cancelled' },
-  pending: { icon: FiAlertCircle, color: 'text-yellow-400', bg: 'bg-yellow-500/20 border-yellow-500/30', label: 'Pending' },
+  cancelled:  { icon: FiXCircle,    color: 'text-red-400',   bg: 'bg-red-500/20 border-red-500/30',   label: 'Cancelled' },
+  pending:    { icon: FiAlertCircle,color: 'text-yellow-400',bg: 'bg-yellow-500/20 border-yellow-500/30', label: 'Pending' },
 };
 
 const BookingCard = ({ booking, onCancel }) => {
@@ -17,18 +19,19 @@ const BookingCard = ({ booking, onCancel }) => {
   const StatusIcon = status.icon;
   const isPast = event?.date && new Date(event.date) < new Date();
   const [cancelling, setCancelling] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const handleCancel = async () => {
-    if (!window.confirm('Are you sure you want to cancel this booking? You will receive a full refund.')) return;
     setCancelling(true);
     try {
       await cancelBooking(booking._id);
-      toast.success('Booking cancelled. Refund initiated.');
+      toast.success('Booking cancelled. Refund will be processed in 5–7 business days.');
       onCancel(booking._id);
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Cancellation failed');
+      toast.error(err?.response?.data?.message || 'Cancellation failed. Please try again.');
     } finally {
       setCancelling(false);
+      setShowConfirm(false);
     }
   };
 
@@ -92,9 +95,12 @@ const BookingCard = ({ booking, onCancel }) => {
               <FiDownload className="w-3.5 h-3.5" /> View Ticket
             </Link>
             {booking.bookingStatus === 'confirmed' && !isPast && (
-              <button onClick={handleCancel} disabled={cancelling}
-                className="flex items-center gap-1.5 text-xs font-medium text-red-400 hover:text-red-300 px-3 py-2 rounded-lg border border-red-500/30 hover:border-red-400/50 transition-all">
-                {cancelling ? <div className="w-3.5 h-3.5 border border-red-400 border-t-transparent rounded-full animate-spin" /> : <FiXCircle className="w-3.5 h-3.5" />}
+              <button
+                onClick={() => setShowConfirm(true)}
+                disabled={cancelling}
+                className="flex items-center gap-1.5 text-xs font-medium text-red-400 hover:text-red-300 px-3 py-2 rounded-lg border border-red-500/30 hover:border-red-400/50 transition-all"
+              >
+                <FiXCircle className="w-3.5 h-3.5" />
                 Cancel Booking
               </button>
             )}
@@ -106,21 +112,52 @@ const BookingCard = ({ booking, onCancel }) => {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={handleCancel}
+        loading={cancelling}
+        title="Cancel Booking?"
+        message={`You're about to cancel your booking for "${event?.title || 'this event'}". Your full payment of ₹${booking.totalAmount?.toLocaleString()} will be refunded within 5–7 business days.`}
+        confirmText="Yes, Cancel Booking"
+        cancelText="Keep Booking"
+        danger
+      />
     </div>
   );
 };
 
+const PAGE_SIZE = 10;
+
 const MyBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [tab, setTab] = useState('all');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  useEffect(() => {
-    getUserBookings()
-      .then(({ data }) => setBookings(data.bookings))
+  const fetchPage = (pageNum, append = false) => {
+    const setBusy = append ? setLoadingMore : setLoading;
+    setBusy(true);
+    return getUserBookings({ page: pageNum, limit: PAGE_SIZE })
+      .then(({ data }) => {
+        setBookings(prev => (append ? [...prev, ...data.bookings] : data.bookings));
+        setTotalPages(data.pages || 1);
+        setTotal(data.total || 0);
+        setPage(pageNum);
+      })
       .catch(() => toast.error('Failed to load bookings'))
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => setBusy(false));
+  };
+
+  useEffect(() => { fetchPage(1, false); }, []);
+
+  const handleLoadMore = () => {
+    if (page < totalPages) fetchPage(page + 1, true);
+  };
 
   const handleCancel = (id) => {
     setBookings(prev => prev.map(b => b._id === id
@@ -142,12 +179,15 @@ const MyBookings = () => {
   ];
 
   return (
+    <PageTransition>
     <div className="min-h-screen pt-20 pb-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-black text-white">My Bookings</h1>
-            <p className="text-gray-400 mt-1">{bookings.length} total booking{bookings.length !== 1 ? 's' : ''}</p>
+            <p className="text-gray-400 mt-1">
+              {bookings.length} of {total} booking{total !== 1 ? 's' : ''} loaded
+            </p>
           </div>
           <Link to="/events" className="btn-primary py-2.5 px-5 text-sm">Book More</Link>
         </div>
@@ -184,12 +224,27 @@ const MyBookings = () => {
             <Link to="/events" className="btn-primary inline-block px-8">Discover Events</Link>
           </div>
         ) : (
-          <div className="space-y-4">
-            {filtered.map(b => <BookingCard key={b._id} booking={b} onCancel={handleCancel} />)}
-          </div>
+          <>
+            <div className="space-y-4">
+              {filtered.map(b => <BookingCard key={b._id} booking={b} onCancel={handleCancel} />)}
+            </div>
+            {page < totalPages && (
+              <div className="text-center mt-8">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="btn-secondary px-8 py-3 inline-flex items-center gap-2 disabled:opacity-50"
+                >
+                  {loadingMore && <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />}
+                  {loadingMore ? 'Loading…' : `Load More (${total - bookings.length} remaining)`}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
+    </PageTransition>
   );
 };
 

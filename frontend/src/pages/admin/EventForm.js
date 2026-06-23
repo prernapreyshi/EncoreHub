@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiArrowLeft, FiSave, FiImage, FiMapPin, FiCalendar, FiDollarSign, FiUsers } from 'react-icons/fi';
-import { createEvent, updateEvent, getEventById } from '../../services/api';
+import { FiArrowLeft, FiSave, FiImage, FiMapPin, FiCalendar, FiDollarSign, FiUsers, FiUpload, FiX } from 'react-icons/fi';
+import { createEvent, updateEvent, getEventById, uploadImage } from '../../services/api';
 import toast from 'react-hot-toast';
+import PageTransition from '../../components/common/PageTransition';
 
 const CATEGORIES = ['Movies', 'Concerts', 'Sports', 'Comedy', 'Festivals', 'Theatre', 'Other'];
 const CITIES = ['Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai', 'Kolkata', 'Pune', 'Ahmedabad', 'Jaipur', 'Goa'];
@@ -24,6 +25,9 @@ const EventForm = () => {
   const [form, setForm] = useState(defaultForm);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMode, setUploadMode] = useState('url'); // 'url' | 'file'
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -111,6 +115,9 @@ const EventForm = () => {
   );
 
   return (
+
+    <PageTransition>
+
     <div className="max-w-3xl space-y-6">
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/admin/events')} className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-all">
@@ -162,12 +169,113 @@ const EventForm = () => {
             <Field label="Date" name="date" type="date" required icon={FiCalendar} />
             <Field label="Time" name="time" placeholder="7:00 PM" required />
           </div>
-          <Field label="Event Image URL" name="image" type="url" placeholder="https://images.unsplash.com/..." icon={FiImage} />
-          {form.image && (
-            <div className="rounded-xl overflow-hidden h-36">
-              <img src={form.image} alt="Preview" className="w-full h-full object-cover" onError={e => e.target.style.display = 'none'} />
+
+          {/* Image — tabbed URL / file upload */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-gray-300">Event Image</label>
+              <div className="flex rounded-lg overflow-hidden border border-dark-border text-xs">
+                {['url', 'file'].map(mode => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setUploadMode(mode)}
+                    className={`px-3 py-1.5 font-medium transition-all capitalize ${uploadMode === mode ? 'bg-primary text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                  >
+                    {mode === 'url' ? '🔗 URL' : '📁 Upload'}
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
+
+            {uploadMode === 'url' ? (
+              <div className="relative">
+                <FiImage className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="url"
+                  name="image"
+                  value={form.image}
+                  onChange={handleChange}
+                  placeholder="https://images.unsplash.com/..."
+                  className="input pl-10"
+                />
+              </div>
+            ) : (
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 5 * 1024 * 1024) {
+                      toast.error('Image must be under 5 MB');
+                      return;
+                    }
+                    setUploading(true);
+                    try {
+                      const fd = new FormData();
+                      fd.append('image', file);
+                      const { data } = await uploadImage(fd);
+                      setForm(prev => ({ ...prev, image: data.url }));
+                      if (data.demo) toast('Demo mode: using placeholder image. Configure Cloudinary for real uploads.', { icon: 'ℹ️' });
+                      else toast.success('Image uploaded successfully');
+                    } catch (err) {
+                      toast.error(err?.response?.data?.message || 'Upload failed');
+                    } finally {
+                      setUploading(false);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="w-full border-2 border-dashed border-dark-border hover:border-primary/50 rounded-xl p-6 text-center transition-all group disabled:opacity-50"
+                >
+                  {uploading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <p className="text-sm text-gray-400">Uploading…</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <FiUpload className="w-6 h-6 text-gray-500 group-hover:text-primary transition-colors" />
+                      <p className="text-sm text-gray-400 group-hover:text-gray-200 transition-colors">
+                        Click to upload image
+                      </p>
+                      <p className="text-xs text-gray-600">PNG, JPG, WEBP up to 5 MB</p>
+                    </div>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Live preview shown regardless of mode */}
+            {form.image && (
+              <div className="relative mt-3 rounded-xl overflow-hidden h-44 group">
+                <img
+                  src={form.image}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                  onError={e => { e.target.style.display = 'none'; }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setForm(prev => ({ ...prev, image: '' }))}
+                  className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white hover:bg-red-500/80 transition-all opacity-0 group-hover:opacity-100"
+                >
+                  <FiX className="w-4 h-4" />
+                </button>
+                <div className="absolute bottom-2 left-2 px-2 py-1 rounded-md bg-black/60 text-xs text-gray-300">
+                  Preview
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Venue */}
@@ -244,6 +352,8 @@ const EventForm = () => {
         </div>
       </form>
     </div>
+  
+    </PageTransition>
   );
 };
 

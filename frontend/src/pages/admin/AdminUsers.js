@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FiSearch, FiShield, FiTrash2, FiUser, FiRefreshCw } from 'react-icons/fi';
+import { FiSearch, FiShield, FiTrash2, FiRefreshCw } from 'react-icons/fi';
 import { getAllUsers, updateUserRole, deleteUser } from '../../services/api';
 import { format } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
+import PageTransition from '../../components/common/PageTransition';
 
 const AdminUsers = () => {
   const { user: currentUser } = useAuth();
@@ -70,6 +71,8 @@ const AdminUsers = () => {
   const regularUsers = users.filter(u => u.role === 'user').length;
 
   return (
+
+    <PageTransition>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -188,6 +191,8 @@ const AdminUsers = () => {
         </div>
       </div>
     </div>
+  
+    </PageTransition>
   );
 };
 

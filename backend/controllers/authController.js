@@ -1,24 +1,11 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const { sendEmail } = require('../utils/sendEmail');
+const { setAuthCookie, clearAuthCookie, setCsrfCookie, clearCsrfCookie } = require('../utils/cookie');
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '30d' });
-};
-
-const sendEmail = async (options) => {
-  const transporter = nodemailer.createTransporter({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-  });
-  await transporter.sendMail({
-    from: `EncoreHub <${process.env.EMAIL_USER}>`,
-    to: options.email,
-    subject: options.subject,
-    html: options.html,
-  });
 };
 
 exports.register = async (req, res) => {
@@ -28,9 +15,12 @@ exports.register = async (req, res) => {
     if (existing) return res.status(400).json({ success: false, message: 'Email already registered' });
     const user = await User.create({ name, email, password });
     const token = generateToken(user._id);
+    setAuthCookie(res, token);
+    const csrfToken = setCsrfCookie(res);
     res.status(201).json({
       success: true,
       token,
+      csrfToken,
       user: { _id: user._id, name: user.name, email: user.email, role: user.role, avatar: user.avatar },
     });
   } catch (err) {
@@ -46,9 +36,12 @@ exports.login = async (req, res) => {
     const isMatch = await user.matchPassword(password);
     if (!isMatch) return res.status(401).json({ success: false, message: 'Invalid credentials' });
     const token = generateToken(user._id);
+    setAuthCookie(res, token);
+    const csrfToken = setCsrfCookie(res);
     res.json({
       success: true,
       token,
+      csrfToken,
       user: { _id: user._id, name: user.name, email: user.email, role: user.role, avatar: user.avatar },
     });
   } catch (err) {
@@ -68,9 +61,12 @@ exports.googleLogin = async (req, res) => {
       await user.save();
     }
     const token = generateToken(user._id);
+    setAuthCookie(res, token);
+    const csrfToken = setCsrfCookie(res);
     res.json({
       success: true,
       token,
+      csrfToken,
       user: { _id: user._id, name: user.name, email: user.email, role: user.role, avatar: user.avatar },
     });
   } catch (err) {
@@ -81,7 +77,14 @@ exports.googleLogin = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
-    if (!user) return res.status(404).json({ success: false, message: 'No user with that email' });
+    // Always respond the same way whether or not the account exists —
+    // otherwise this endpoint becomes an email-enumeration oracle.
+    const genericResponse = {
+      success: true,
+      message: 'If an account with that email exists, a reset link has been sent.',
+    };
+    if (!user) return res.json(genericResponse);
+
     const resetToken = user.getResetPasswordToken();
     await user.save({ validateBeforeSave: false });
     const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
@@ -97,13 +100,15 @@ exports.forgotPassword = async (req, res) => {
           <p style="color:#666;font-size:12px">If you didn't request this, please ignore this email.</p>
         </div>`,
       });
-      res.json({ success: true, message: 'Reset email sent' });
     } catch (emailErr) {
+      // Don't leak email-sending failures to the client either — log
+      // server-side and still return the generic response.
+      console.error('Failed to send reset email:', emailErr.message);
       user.resetPasswordToken = undefined;
       user.resetPasswordExpire = undefined;
       await user.save({ validateBeforeSave: false });
-      res.status(500).json({ success: false, message: 'Email could not be sent' });
     }
+    res.json(genericResponse);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -122,13 +127,29 @@ exports.resetPassword = async (req, res) => {
     user.resetPasswordExpire = undefined;
     await user.save();
     const token = generateToken(user._id);
-    res.json({ success: true, token, message: 'Password reset successful' });
+    setAuthCookie(res, token);
+    const csrfToken = setCsrfCookie(res);
+    res.json({ success: true, token, csrfToken, message: 'Password reset successful' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
+exports.logout = (req, res) => {
+  clearAuthCookie(res);
+  clearCsrfCookie(res);
+  res.json({ success: true, message: 'Logged out' });
+};
+
 exports.getMe = async (req, res) => {
   const user = await User.findById(req.user._id).populate('favorites');
-  res.json({ success: true, user });
+  // Self-heal: a session that predates CSRF protection (or one where the
+  // browser cleared the readable csrfToken cookie but kept the httpOnly auth
+  // cookie) won't have a CSRF cookie yet. Re-issue one here so the user isn't
+  // stuck unable to perform any mutating action until they log out and back in.
+  let csrfToken = req.cookies?.csrfToken;
+  if (!csrfToken) {
+    csrfToken = setCsrfCookie(res);
+  }
+  res.json({ success: true, user, csrfToken });
 };

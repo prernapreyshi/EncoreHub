@@ -5,9 +5,10 @@ import { getProfile } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import EventCard from '../components/events/EventCard';
 import toast from 'react-hot-toast';
+import PageTransition from '../components/common/PageTransition';
 
 const Wishlist = () => {
-  const { user, updateUser } = useAuth();
+  const { updateUser } = useAuth();
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,6 +31,7 @@ const Wishlist = () => {
   };
 
   return (
+    <PageTransition>
     <div className="min-h-screen pt-20 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Header */}
@@ -97,6 +99,7 @@ const Wishlist = () => {
         )}
       </div>
     </div>
+    </PageTransition>
   );
 };
 

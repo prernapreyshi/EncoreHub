@@ -4,6 +4,7 @@ import { FiCalendar, FiUsers, FiBookOpen, FiDollarSign, FiTrendingUp, FiArrowRig
 import { getAnalytics, getAllBookings } from '../../services/api';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import PageTransition from '../../components/common/PageTransition';
 
 const StatCard = ({ icon: Icon, label, value, change, color, bg }) => (
   <div className={`card p-5 border-l-4 ${color}`}>
@@ -54,6 +55,7 @@ const AdminOverview = () => {
   ];
 
   return (
+    <PageTransition>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -171,6 +173,7 @@ const AdminOverview = () => {
         <Link to="/admin/analytics" className="ml-auto btn-secondary py-2 px-4 text-sm whitespace-nowrap">View Analytics</Link>
       </div>
     </div>
+    </PageTransition>
   );
 };
 

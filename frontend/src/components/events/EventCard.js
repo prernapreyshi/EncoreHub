@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiCalendar, FiMapPin, FiHeart, FiStar } from 'react-icons/fi';
 import { format } from 'date-fns';
@@ -18,6 +18,7 @@ const categoryColors = {
 
 const EventCard = ({ event, variant = 'default', onWishlistUpdate }) => {
   const { user, updateUser } = useAuth();
+  const [imgLoaded, setImgLoaded] = useState(false);
   const isFavorite = user?.favorites?.some(f => (f._id || f) === event._id);
 
   const handleFavorite = async (e) => {
@@ -61,11 +62,13 @@ const EventCard = ({ event, variant = 'default', onWishlistUpdate }) => {
 
   return (
     <Link to={`/events/${event._id}`} className="card group hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 transition-all duration-300 block">
-      <div className="relative overflow-hidden aspect-[3/2]">
+      <div className="relative overflow-hidden aspect-[3/2] bg-dark-card">
+        {!imgLoaded && <div className="absolute inset-0 shimmer" />}
         <img
           src={event.image || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400'}
           alt={event.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          onLoad={() => setImgLoaded(true)}
+          className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
         />
         <div className="absolute inset-0 overlay" />
         <div className="absolute top-3 left-3 flex gap-2">

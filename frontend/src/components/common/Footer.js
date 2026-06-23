@@ -23,8 +23,20 @@ const Footer = () => {
               Your ultimate destination for discovering and booking live events — concerts, sports, theatre, and more.
             </p>
             <div className="flex items-center gap-3">
-              {[FiInstagram, FiTwitter, FiFacebook, FiYoutube].map((Icon, i) => (
-                <a key={i} href="#" className="w-9 h-9 rounded-full bg-white/5 hover:bg-primary/20 hover:text-primary flex items-center justify-center text-gray-400 transition-all">
+              {[
+                { Icon: FiInstagram, label: 'Instagram' },
+                { Icon: FiTwitter,   label: 'Twitter / X' },
+                { Icon: FiFacebook,  label: 'Facebook' },
+                { Icon: FiYoutube,   label: 'YouTube' },
+              ].map(({ Icon, label }) => (
+                <a
+                  key={label}
+                  href={`https://www.${label.split(' ')[0].toLowerCase()}.com`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`EncoreHub on ${label}`}
+                  className="w-9 h-9 rounded-full bg-white/5 hover:bg-primary/20 hover:text-primary flex items-center justify-center text-gray-400 transition-all"
+                >
                   <Icon className="w-4 h-4" />
                 </a>
               ))}

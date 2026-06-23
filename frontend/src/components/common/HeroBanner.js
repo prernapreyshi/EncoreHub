@@ -5,10 +5,12 @@ import { FiChevronLeft, FiChevronRight, FiCalendar, FiMapPin, FiStar } from 'rea
 const HeroBanner = ({ events }) => {
   const [current, setCurrent] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   const next = useCallback(() => {
     if (isAnimating) return;
     setIsAnimating(true);
+    setImgLoaded(false);
     setTimeout(() => {
       setCurrent(c => (c + 1) % events.length);
       setIsAnimating(false);
@@ -18,6 +20,7 @@ const HeroBanner = ({ events }) => {
   const prev = () => {
     if (isAnimating) return;
     setIsAnimating(true);
+    setImgLoaded(false);
     setTimeout(() => {
       setCurrent(c => (c - 1 + events.length) % events.length);
       setIsAnimating(false);
@@ -36,10 +39,12 @@ const HeroBanner = ({ events }) => {
     <div className="relative h-[70vh] min-h-[500px] max-h-[750px] overflow-hidden">
       {/* Background */}
       <div className={`absolute inset-0 transition-opacity duration-500 ${isAnimating ? 'opacity-0' : 'opacity-100'}`}>
+        {!imgLoaded && <div className="absolute inset-0 shimmer z-0" />}
         <img
           src={event.image || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1600'}
           alt={event.title}
-          className="w-full h-full object-cover"
+          onLoad={() => setImgLoaded(true)}
+          className={`w-full h-full object-cover transition-opacity duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />

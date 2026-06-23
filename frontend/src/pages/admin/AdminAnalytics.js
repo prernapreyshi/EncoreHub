@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiTrendingUp, FiDollarSign, FiBookOpen, FiCalendar, FiRefreshCw } from 'react-icons/fi';
 import { getAnalytics } from '../../services/api';
 import toast from 'react-hot-toast';
+import PageTransition from '../../components/common/PageTransition';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -112,6 +113,8 @@ const AdminAnalytics = () => {
   ];
 
   return (
+
+    <PageTransition>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -211,6 +214,8 @@ const AdminAnalytics = () => {
         </div>
       </div>
     </div>
+  
+    </PageTransition>
   );
 };
 
