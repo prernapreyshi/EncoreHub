@@ -76,7 +76,9 @@ const Footer = () => {
             <span className="flex items-center gap-1.5"><FiMail className="w-4 h-4 text-primary" /> support@encorehub.com</span>
             <span className="flex items-center gap-1.5"><FiPhone className="w-4 h-4 text-primary" /> 1800-123-4567</span>
           </div>
-          <p className="text-gray-500 text-sm">© {new Date().getFullYear()} EncoreHub. All rights reserved.</p>
+        <p className="text-gray-500 text-sm">
+  Your gateway to live entertainment.
+</p>
         </div>
       </div>
     </footer>
