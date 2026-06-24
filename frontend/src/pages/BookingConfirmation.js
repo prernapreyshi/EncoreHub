@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import { FiCheckCircle, FiDownload, FiCalendar, FiMapPin, FiClock, FiUser } from 'react-icons/fi';
 import { getBookingById } from '../services/api';
