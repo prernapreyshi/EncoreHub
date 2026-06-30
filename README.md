@@ -1,89 +1,154 @@
-# EncoreHub — Event Ticket Booking Platform
+#  EncoreHub – Event Ticket Booking Platform
 
-A full-stack, production-ready event ticket booking platform inspired by BookMyShow. Built with React, Node.js, MongoDB, and Razorpay.
+EncoreHub is a full-stack event ticket booking application inspired by BookMyShow. Users can browse events, select seats, make bookings, and manage their profiles.
 
 ---
 
 ##  Tech Stack
 
-| Layer      | Tech                                                   |
-|------------|--------------------------------------------------------|
-| Frontend   | React 18, Tailwind CSS, React Router DOM, Axios        |
-| Backend    | Node.js, Express.js                                   |
-| Database   | MongoDB + Mongoose                                    |
-| Auth       | JWT + Google OAuth                                    |
-| Payments   | Razorpay (with demo mode when keys absent)            |
-| QR Codes   | qrcode.react                                          |
+### Frontend
+- React.js
+- Tailwind CSS
+- React Router DOM
+- Axios
+
+### Backend
+- Node.js
+- Express.js
+
+### Database
+- MongoDB + Mongoose
+
+### Authentication
+- JWT Authentication
+- Google OAuth
+
+### Payment Gateway
+- Razorpay
+
+### Additional Features
+- QR Code Generation
+- Password Reset via Email
 
 ---
 
-## Quick Start
+##  Prerequisites
 
-### Prerequisites
-- Node.js 18+
-- MongoDB (local or MongoDB Atlas)
+Before running the project, make sure you have:
+
+- Node.js (v18 or above)
+- MongoDB Atlas or Local MongoDB
 - npm
 
-### 1. Clone & Install
+---
+
+##  Installation
+
+### Clone the Repository
 
 ```bash
-# Install backend dependencies
+git clone <your-repository-url>
+cd EncoreHub
+```
+
+### Install Backend Dependencies
+
+```bash
 cd backend
 npm install
+```
 
-# Install frontend dependencies
+### Install Frontend Dependencies
+
+```bash
 cd ../frontend
 npm install
 ```
 
-### 2. Configure Environment
+---
 
-Edit `backend/.env`:
+##  Environment Variables
+
+Create a `.env` file inside the `backend` folder:
 
 ```env
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/encorehub
-JWT_SECRET=your_super_secret_key_here
+MONGODB_URI=your_mongodb_connection_string
+JWT_SECRET=your_secret_key
 CLIENT_URL=http://localhost:3000
 
-# Optional — leave as-is for demo mode (no real payments)
-RAZORPAY_KEY_ID=your_razorpay_key_id
-RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+# Razorpay (Optional)
+RAZORPAY_KEY_ID=your_key
+RAZORPAY_KEY_SECRET=your_secret
 
-# Optional — for password reset emails
+# Email Configuration (Optional)
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASS=your_app_password
 ```
 
-### 3. Seed the Database
+---
+
+##  Run the Application
+
+### Start Backend
 
 ```bash
-cd backend
-npm run seed
-```
-
-
-
-### 4. Run the App
-
-```bash
-# Terminal 1 — Backend (port 5000)
 cd backend
 npm run dev
+```
 
-# Terminal 2 — Frontend (port 3000)
+### Start Frontend
+
+```bash
 cd frontend
 npm start
 ```
 
-Open **http://localhost:3000** 
+Open:
+
+```
+http://localhost:3000
+```
 
 ---
 
-##  Demo Login (No Setup Needed)
+## Features
 
-The login page has quick-fill buttons for:
-- ** Demo User** → browses events, books tickets
-- ** Demo Admin** → full dashboard access
+- User Authentication (JWT + Google Login)
+- Browse Events
+- Seat Selection
+- Ticket Booking
+- Razorpay Payment Integration
+- Booking History
+- Admin Dashboard
+- QR Code Tickets
+- Password Reset
+- Responsive Design
+
+---
+
+##  Demo Accounts
+
+### Demo User
+- Browse events
+- Book tickets
+- View booking history
+
+### Demo Admin
+- Manage events
+- View bookings
+- Access dashboard
+
+---
+
+##  Project Structure
+
+```
+EncoreHub/
+├── frontend/
+├── backend/
+├── README.md
+```
+
