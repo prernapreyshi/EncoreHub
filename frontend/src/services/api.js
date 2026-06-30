@@ -11,7 +11,7 @@ const getCsrfToken = () => {
 };
 
 const API = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+  baseURL: process.env.REACT_APP_API_URL,
   // Needed for cross-origin cookie sending/receiving (auth + CSRF cookies).
   withCredentials: true,
 });
